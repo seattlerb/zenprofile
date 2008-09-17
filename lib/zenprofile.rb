@@ -1,9 +1,8 @@
-begin require 'rubygems'; rescue LoadError; end
+require 'rubygems'
 require 'inline'
 require 'singleton'
 
 class ZenProfiler
-
   VERSION = '1.0.2'
 
   include Singleton

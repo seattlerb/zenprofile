@@ -1,3 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-exec ruby -I /Users/ryan/Work/p4/zss/src/ZenHacks/dev/lib -rzenprofiler $*
+require 'rbconfig'
+
+ruby = File.join(Config::CONFIG['bindir'], Config::CONFIG['RUBY_INSTALL_NAME'])
+dir = File.join(File.dirname(File.dirname(__FILE__)), 'lib')
+
+exec ruby, "-I#{dir}", '-rzenprofiler', *ARGV

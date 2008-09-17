@@ -23,7 +23,7 @@ fi
 echo
 echo zenspider profiler:
 export GEM_SKIP=RubyInline
-time ruby -I.:lib:../../RubyInline/dev -rzenprofile misc/factorial.rb $N 2>&1 | head -9
+time ./bin/zenprofile misc/factorial.rb $N 2>&1 | head -9
 
 # shugo's version
 # time ruby -I.:lib -runprof misc/factorial.rb $N 2>&1 | head
