@@ -1,0 +1,3 @@
+#!/bin/bash
+
+exec ruby -I /Users/ryan/Work/p4/zss/src/ZenHacks/dev/lib -rzenprofiler $*
