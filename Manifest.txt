@@ -3,6 +3,7 @@ Manifest.txt
 README.txt
 Rakefile
 bin/zenprofile
+lib/spy_on.rb
 lib/zenprofile.rb
 lib/zenprofiler.rb
 misc/factorial.rb
