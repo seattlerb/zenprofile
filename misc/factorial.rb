@@ -1,13 +1,17 @@
 #!/usr/local/bin/ruby -w
 
 class Factorial
-
   def factorial(n)
     f = 1
     n.downto(2) { |x| f *= x }
     return f
   end
+end
 
+if ENV['SPY'] then
+  require 'spy_on'
+
+  Integer.spy_on :downto
 end
 
 if $0 == __FILE__ then

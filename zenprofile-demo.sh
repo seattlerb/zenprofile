@@ -2,7 +2,7 @@
 
 N=$1
 
-if [ -z $N ]; then N=5000; fi
+if [ -z $N ]; then N=100_000; fi
 if [ -z $2 ]; then SKIP=no; else SKIP=yes; fi
 
 rm -rf ~/.ruby_inline
@@ -12,18 +12,23 @@ echo N=$N
 
 if [ $SKIP = no ]; then
     echo
-    echo ruby vanilla:
-    time ruby misc/factorial.rb $N
+    echo ruby vanilla :
+    X=1 time ruby misc/factorial.rb $N
 
     echo
     echo ruby profiler:
-    time ruby -rprofile misc/factorial.rb $N 2>&1 | head -6
+    X=1 time ruby -rprofile misc/factorial.rb $N 2>&1 | egrep -v "^ *0.00"
 fi
 
 echo
-echo zenspider profiler:
+echo zen profiler :
 export GEM_SKIP=RubyInline
-time ./bin/zenprofile misc/factorial.rb $N 2>&1 | head -9
+X=1 time ./bin/zenprofile misc/factorial.rb $N 2>&1 | egrep -v "^ *0.00"
+
+echo
+echo zen profiler pure ruby:
+export GEM_SKIP=RubyInline
+PURERUBY=1 time ./bin/zenprofile misc/factorial.rb $N 2>&1 | egrep -v "^ *0.00"
 
 # shugo's version
 # time ruby -I.:lib -runprof misc/factorial.rb $N 2>&1 | head
