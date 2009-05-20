@@ -1,21 +1,41 @@
 require 'rubygems'
 require 'inline'
 require 'singleton'
+$: << '../../event_hook/dev/lib' # TODO: remove
+require 'event_hook'
 
-class ZenProfiler
+##
+# ZenProfiler provides a faster version of the standard library ruby
+# profiler. It is otherwise pretty much the same as before.
+#
+# Invoke it via:
+#
+#    % zenprofile misc/factorial.rb
+#
+# or:
+#
+#    % ruby -rzenprofile misc/factorial.rb
+
+class ZenProfiler < EventHook
   VERSION = '1.0.2'
 
-  include Singleton
-
-  @@start = @@stack = @@map = nil
-
+  @@start = nil
+  @@stack = [[0, 0, [nil, :toplevel]], [0, 0, [nil, :dummy]]]
+  @@map   = Hash.new { |h,k| h[k] = [0, 0.0, 0.0, k] }
+  @@map["#toplevel"] = [1, 0.0, 0.0, [nil, "#toplevel"]]
   @@percent_time_threshold = 0.5
 
-  def self.go
+  def self.run(fp = $stdout, opts = {})
     at_exit {
-      ZenProfiler::print_profile(STDOUT)
+      ZenProfiler::print_profile fp, opts
     }
-    ZenProfiler::start_profile
+    ZenProfiler::start_hook
+  end
+
+  def self.start_hook
+    @@start  ||= Time.now.to_f
+    @@start2 ||= Process.times[0]
+    super
   end
 
   def self.percent_time_threshold
@@ -26,25 +46,10 @@ class ZenProfiler
     @@percent_time_threshold = percent_time_threshold
   end
 
-  def self.restart
-    @@start = self.instance.time_now
-    @@start2 = Process.times[0]
-    @@stack = [[0, 0, [nil, :toplevel]], [0, 0, [nil, :dummy]]]
-    @@map = {"#toplevel" => [1, 0.0, 0.0, [nil, "#toplevel"]]}
-  end
+  def self.print_profile(f, opts = {})
+    stop_hook
 
-  def self.start_profile
-    self.restart unless @@start
-    self.instance.add_event_hook
-  end
-
-  def self.stop_profile
-    self.instance.remove_event_hook
-  end
-
-  def self.print_profile(f)
-    stop_profile
-    @@total = self.instance.time_now - @@start
+    @@total = Time.now.to_f - @@start
     @@total = 0.01 if @@total == 0
     @@total2 = Process.times[0] - @@start2
     @@map["#toplevel"][1] = @@total
@@ -89,132 +94,122 @@ class ZenProfiler
     end
   end
 
-  ############################################################
-  # Inlined Methods:
+  if ENV['PURERUBY'] then
+    def self.process event, obj, method, klass
+      case event
+      when CALL, CCALL
+        now = Process.times[0]
+        @@stack.push [now, 0.0]
+      when RETURN, CRETURN
+        key = [klass, method]
+        if tick = @@stack.pop
+          now = Process.times[0]
+          data = @@map[key]
+          data[0] += 1
+          cost = now - tick[0]
+          data[1] += cost
+          data[2] += cost - tick[1]
+          @@stack[-1][1] += cost if @@stack[-1]
+        end
+      end
+    end
+  else
+    class Inline::C # REFACTOR
+      def add_static name, init, type = "VALUE"
+        prefix      "static #{type} #{name};"
+        add_to_init "#{name} = #{init};"
+      end
+    end
 
-  inline(:C) do |builder|
+    inline(:C) do |builder|
+      builder.add_type_converter("rb_event_t", '', '')
+      builder.add_type_converter("ID", '', '')
+      builder.add_type_converter("NODE *", '', '')
 
-    builder.add_type_converter("rb_event_t", '', '')
-    builder.add_type_converter("ID", '', '')
-    builder.add_type_converter("NODE *", '', '')
+      builder.include '<time.h>'
+      builder.include '"node.h"'
 
-    builder.include '<time.h>'
-    builder.include '"node.h"'
+      builder.add_static 'profiler_klass',  'rb_path2class("ZenProfiler")'
+      builder.add_static 'eventhook_klass', 'rb_path2class("EventHook")'
+      builder.add_static 'stack',           'rb_cv_get(profiler_klass, "@@stack")'
+      builder.add_static 'map',             'rb_cv_get(profiler_klass, "@@map")'
 
-    builder.prefix "
-static VALUE profiler_klass = Qnil;
-static VALUE stack = Qnil;
-static VALUE map = Qnil;
-"
+      builder.add_static 'id_allocate', 'rb_intern("allocate")'
 
-    builder.c_raw <<-'EOF'
-    VALUE time_now() {
-      return rb_float_new(((double) clock() / CLOCKS_PER_SEC));
-    }
-    EOF
+      builder.prefix "
+        #define id_call    INT2FIX(RUBY_EVENT_CALL)
+        #define id_ccall   INT2FIX(RUBY_EVENT_C_CALL)
+        #define id_return  INT2FIX(RUBY_EVENT_RETURN)
+        #define id_creturn INT2FIX(RUBY_EVENT_C_RETURN)
+      "
 
-    builder.c_raw <<-'EOF'
-    static void
-    prof_event_hook(rb_event_t event, NODE *node,
-                    VALUE recv, ID mid, VALUE klass) {
+      builder.prefix <<-'EOF'
+        VALUE time_now() {
+          return rb_float_new(((double) clock() / CLOCKS_PER_SEC));
+        }
+      EOF
 
-      static int profiling = 0;
-      VALUE now;
+      builder.c_singleton <<-'EOF'
+      static void
+      process(VALUE event, VALUE recv, VALUE method, VALUE klass) {
+        static int profiling = 0;
 
-      if (mid == ID_ALLOCATOR) return;
-      if (profiling) return;
-      profiling++;
+        if (method == id_allocate) return;
+        if (profiling) return;
+        profiling++;
 
-      now = time_now();
+        VALUE now = time_now();
 
-      if (NIL_P(profiler_klass))
-        profiler_klass = rb_path2class("ZenProfiler");
-      if (NIL_P(stack))
-        stack = rb_cv_get(profiler_klass, "@@stack");
-      if (NIL_P(map))
-        map   = rb_cv_get(profiler_klass, "@@map");
-
-      switch (event) {
-      case RUBY_EVENT_CALL:
-      case RUBY_EVENT_C_CALL:
-        {
-          VALUE signature, time;
-          signature = rb_ary_new2(2);
-
-          if (TYPE(klass) == T_ICLASS) {
-            klass = RBASIC(klass)->klass;
-          } else if (FL_TEST(klass, FL_SINGLETON)) {
-            klass = recv;
+        switch (event) {
+        case id_call:
+        case id_ccall:
+          {
+            VALUE time = rb_ary_new2(2);
+            rb_ary_store(time, 0, now);
+            rb_ary_store(time, 1, rb_float_new(0.0));
+            rb_ary_push(stack, time);
           }
+          break;
+        case id_return:
+        case id_creturn:
+          {
+            if (TYPE(klass) == T_ICLASS) {
+              klass = RBASIC(klass)->klass;
+            } else if (FL_TEST(klass, FL_SINGLETON)) {
+              klass = recv;
+            }
 
-          rb_ary_store(signature, 0, klass);
-          rb_ary_store(signature, 1, ID2SYM(mid));
-          time = rb_ary_new2(3);
-          rb_ary_store(time, 0, now);
-          rb_ary_store(time, 1, rb_float_new(0.0));
-          rb_ary_store(time, 2, signature);
-          rb_ary_push(stack, time);
-        }
-        break;
-      case RUBY_EVENT_RETURN:
-      case RUBY_EVENT_C_RETURN:
-        {
-        VALUE tick;
-        VALUE signature;
-        VALUE data = Qnil;
-        VALUE toplevel;
-        double cost;
+            VALUE key = rb_ary_new2(2);
+            rb_ary_store(key, 0, klass);
+            rb_ary_store(key, 1, method);
 
-        tick = rb_ary_pop(stack);
-        if (!RTEST(tick)) break;
-        signature = rb_ary_entry(tick, -1);
+            VALUE tick = rb_ary_pop(stack);
+            if (!RTEST(tick)) break;
 
-        st_lookup(RHASH(map)->tbl, signature, &data);
-        if (NIL_P(data)) {
-          data = rb_ary_new2(4);
-          rb_ary_store(data, 0, INT2FIX(0));
-          rb_ary_store(data, 1, rb_float_new(0.0));
-          rb_ary_store(data, 2, rb_float_new(0.0));
-          rb_ary_store(data, 3, signature);
-          rb_hash_aset(map, signature, data);
-        }
+            VALUE data = rb_hash_aref(map, key);
 
-        rb_ary_store(data, 0, ULONG2NUM(NUM2ULONG(rb_ary_entry(data, 0)) + 1));
+            rb_ary_store(data, 0, rb_ary_entry(data, 0) + 2); // omg I suck
 
-        cost = (NUM2DBL(now) - NUM2DBL(rb_ary_entry(tick, 0)));
+            double cost = NUM2DBL(now) - NUM2DBL(rb_ary_entry(tick, 0));
 
-        rb_ary_store(data, 1, rb_float_new(NUM2DBL(rb_ary_entry(data, 1))
-                                           + cost));
+            rb_ary_store(data, 1, rb_float_new(NUM2DBL(rb_ary_entry(data, 1))
+                                               + cost));
 
-        // data[2] += cost - tick[1]
-        rb_ary_store(data, 2, rb_float_new(NUM2DBL(rb_ary_entry(data, 2))
-                                           + cost
-                                           - NUM2DBL(rb_ary_entry(tick, 1))));
- 
-        toplevel = rb_ary_entry(stack, -1);
-        if (RTEST(toplevel)) {
-          VALUE tl_stats = rb_ary_entry(toplevel, 1);
-          rb_ary_store(toplevel, 1, rb_float_new(NUM2DBL(tl_stats) + cost));
-        }
-        }
-        break;
+            rb_ary_store(data, 2, rb_float_new(NUM2DBL(rb_ary_entry(data, 2))
+                                               + cost
+                                               - NUM2DBL(rb_ary_entry(tick, 1))));
+
+            VALUE toplevel = rb_ary_entry(stack, -1);
+            if (RTEST(toplevel)) {
+              VALUE tl_stats = rb_ary_entry(toplevel, 1);
+              rb_ary_store(toplevel, 1, rb_float_new(NUM2DBL(tl_stats) + cost));
+            }
+          }
+          break;
+        } // switch (event)
+        profiling--;
       }
-      profiling--;
-    }
-    EOF
-
-    builder.c <<-'EOF'
-      void add_event_hook() {
-        rb_add_event_hook(prof_event_hook,
-                          RUBY_EVENT_CALL | RUBY_EVENT_RETURN |
-                          RUBY_EVENT_C_CALL | RUBY_EVENT_C_RETURN);
-      }
-    EOF
-
-    builder.c <<-'EOF'
-      void remove_event_hook() {
-        rb_remove_event_hook(prof_event_hook);
-      }
-    EOF
+      EOF
+    end
   end
 end
