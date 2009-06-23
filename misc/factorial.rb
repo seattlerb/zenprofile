@@ -17,7 +17,7 @@ end
 if $0 == __FILE__ then
   f = Factorial.new()
 
-  max = ARGV.shift || 1000000
+  max = ARGV.shift || 1_000_000
   max = max.to_i
 
   tstart = Time.now
