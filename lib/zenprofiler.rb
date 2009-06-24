@@ -17,12 +17,12 @@ require 'event_hook'
 #    % ruby -rzenprofile misc/factorial.rb
 
 class ZenProfiler < EventHook
-  VERSION = '1.0.2'
+  VERSION = '1.1.0'
 
-  @@start = nil
-  @@stack = [[0, 0, [nil, :toplevel]], [0, 0, [nil, :dummy]]]
-  @@map   = Hash.new { |h,k| h[k] = [0, 0.0, 0.0, k] }
-  @@map["#toplevel"] = [1, 0.0, 0.0, [nil, "#toplevel"]]
+  @@start                  = nil
+  @@stack                  = [[0, 0, [nil, :toplevel]], [0, 0, [nil, :dummy]]]
+  @@map                    = Hash.new { |h,k| h[k] = [0, 0.0, 0.0, k] }
+  @@map["#toplevel"]       = [1, 0.0, 0.0, [nil, "#toplevel"]]
   @@percent_time_threshold = 0.5
 
   def self.run(fp = $stdout, opts = {})
