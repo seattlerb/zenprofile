@@ -114,13 +114,6 @@ class ZenProfiler < EventHook
       end
     end
   else
-    class Inline::C # REFACTOR
-      def add_static name, init, type = "VALUE"
-        prefix      "static #{type} #{name};"
-        add_to_init "#{name} = #{init};"
-      end
-    end
-
     inline(:C) do |builder|
       builder.add_type_converter("rb_event_t", '', '')
       builder.add_type_converter("ID", '', '')
