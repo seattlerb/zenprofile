@@ -17,7 +17,7 @@ require 'event_hook'
 #    % ruby -rzenprofile misc/factorial.rb
 
 class ZenProfiler < EventHook
-  VERSION = '1.1.0'
+  VERSION = '1.2.0'
 
   @@start                  = nil
   @@stack                  = [[0, 0, [nil, :toplevel]], [0, 0, [nil, :dummy]]]
