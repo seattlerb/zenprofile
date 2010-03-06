@@ -80,7 +80,7 @@ class ZenProfiler < EventHook
           klassname = klass.name rescue klass.to_s.sub(/#<\S+:(\S+)>/, '\\1')
           "#{klassname}##{meth}"
         else
-          "#{klass.class}##{meth}"
+          "#{klass}##{meth}"
         end
 
       f.printf "%6.2f ",  percent_time
@@ -101,6 +101,7 @@ class ZenProfiler < EventHook
         now = Process.times[0]
         @@stack.push [now, 0.0]
       when RETURN, CRETURN
+        klass = klass.name rescue return
         key = [klass, method]
         if tick = @@stack.pop
           now = Process.times[0]
@@ -206,3 +207,20 @@ class ZenProfiler < EventHook
     end
   end
 end
+
+class << ENV
+  def class
+    Class
+  end
+
+  def name
+    "ENV"
+  end
+end
+
+class << self
+  def name
+    "::main"
+  end
+end
+
