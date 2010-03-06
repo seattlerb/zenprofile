@@ -62,9 +62,21 @@ class Module
       end "
   end
 
+  def spy_cm *args
+    this_sucks.spy *args
+  end
+
   def spy_on *msgs
     msgs.each do |msg|
       spy msg
     end
+  end
+
+  def spy_on_cm *msgs
+    this_sucks.spy_on *msgs
+  end
+
+  def this_sucks
+    class << self; self; end
   end
 end
