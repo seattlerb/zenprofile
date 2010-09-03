@@ -11,8 +11,8 @@ Hoe.spec 'zenprofile' do
 
   self.rubyforge_name = 'seattlerb'
 
-  extra_deps << 'ZenTest'
-  extra_deps << 'event_hook'
+  extra_deps << ['ZenTest', "~> 4.4"]
+  extra_deps << ['event_hook', "~> 1.0.0"]
 end
 
 # vim: syntax=ruby
