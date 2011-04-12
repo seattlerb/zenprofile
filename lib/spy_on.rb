@@ -58,7 +58,7 @@ class Module
           x = @@tally.safe_idx('#{self}.#{msg}')
           x.safe_asgn(site, x.safe_idx(site) + 1)
         end
-        self.#{old_msg}(*args, &block)
+        #{old_msg}(*args, &block)
       end "
   end
 
