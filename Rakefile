@@ -9,10 +9,8 @@ Hoe.plugin :inline
 Hoe.spec 'zenprofile' do
   developer 'Ryan Davis', 'ryand-ruby@zenspider.com'
 
-  self.rubyforge_name = 'seattlerb'
-
-  extra_deps << ['ZenTest', "~> 4.4"]
-  extra_deps << ['event_hook', "~> 1.0.0"]
+  dependency "ZenTest", "~> 4.4"
+  dependency "event_hook", "~> 1.0.0"
 end
 
 # vim: syntax=ruby
