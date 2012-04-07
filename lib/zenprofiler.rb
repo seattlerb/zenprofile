@@ -148,8 +148,8 @@ class ZenProfiler < EventHook
       process(VALUE event, VALUE recv, VALUE method, VALUE klass) {
         static int profiling = 0;
 
-        if (method == id_allocate) return;
-        if (profiling) return;
+        if (method == id_allocate) return Qnil;
+        if (profiling) return Qnil;
         profiling++;
 
         VALUE now = time_now();
