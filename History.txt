@@ -1,3 +1,10 @@
+=== 1.3.2 / 2012-04-06
+
+* 2 bug fixes:
+
+  * Fixed compile problems raised by clang
+  * Removed 'self.' from wrapped call to fix calling private methods. (joevandyk)
+
 === 1.3.1 / 2011-02-18
 
 * 1 bug fix:
