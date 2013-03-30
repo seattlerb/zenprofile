@@ -4,6 +4,7 @@ require 'rubygems'
 require 'hoe'
 
 Hoe.plugin :seattlerb
+Hoe.plugin :isolate
 Hoe.plugin :inline
 
 Hoe.spec 'zenprofile' do

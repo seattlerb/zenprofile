@@ -17,13 +17,17 @@ require 'event_hook'
 #    % ruby -rzenprofile misc/factorial.rb
 
 class ZenProfiler < EventHook
-  VERSION = '1.3.2'
+  VERSION = "1.3.2" # :nodoc:
 
   @@start                  = nil
   @@stack                  = [[0, 0, [nil, :toplevel]], [0, 0, [nil, :dummy]]]
   @@map                    = Hash.new { |h,k| h[k] = [0, 0.0, 0.0, k] }
   @@map["#toplevel"]       = [1, 0.0, 0.0, [nil, "#toplevel"]]
   @@percent_time_threshold = 0.5
+
+  ##
+  # Start the profiler hook and run a report at_exit. Prints to +fp+
+  # (defaulting to $stdout) and takes +opts+.
 
   def self.run(fp = $stdout, opts = {})
     at_exit {
@@ -32,19 +36,31 @@ class ZenProfiler < EventHook
     ZenProfiler::start_hook
   end
 
+  ##
+  # Turn on the profiler.
+
   def self.start_hook
     @@start  ||= Time.now.to_f
     @@start2 ||= Process.times[0]
     super
   end
 
+  ##
+  # Return the cut-off for reported %-time.
+
   def self.percent_time_threshold
     @@percent_time_threshold
   end
 
+  ##
+  # Set the cut-off for reported %-time.
+
   def self.percent_time_threshold=(percent_time_threshold)
     @@percent_time_threshold = percent_time_threshold
   end
+
+  ##
+  # Print a report to +f+.
 
   def self.print_profile(f, opts = {})
     stop_hook
@@ -95,6 +111,10 @@ class ZenProfiler < EventHook
   end
 
   if ENV['PURERUBY'] then
+
+    ##
+    # Process an +event+ for +obj+ on +klass+ and +method+.
+
     def self.process event, obj, method, klass
       case event
       when CALL, CCALL
@@ -208,19 +228,18 @@ class ZenProfiler < EventHook
   end
 end
 
-class << ENV
-  def class
+class << ENV # :nodoc:
+  def class # :nodoc:
     Class
   end
 
-  def name
+  def name # :nodoc:
     "ENV"
   end
 end
 
 class << self
-  def name
+  def name # :nodoc:
     "::main"
   end
 end
-

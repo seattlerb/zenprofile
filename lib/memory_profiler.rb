@@ -1,3 +1,5 @@
+##
+# A dead-simple pure-ruby low-memory-generating memory profiler.
 
 class MemoryProfiler
 
@@ -7,16 +9,16 @@ class MemoryProfiler
   # * 2 hashes (curr, prev)
   # * classes as keys
   # * fixnums as values.
-  # 
+  #
   # No extra memory required if I can help it. Keep it as simple as
   # possible. The code at the link above is WAY to complex for such a
   # simple task.  It does use a sort_by, so that produces a bit extra
   # junk... but that shouldn't be more than an extra array and hash
   # per iteration.
-  # 
+  #
   # Just fire it up as MemoryProfiler.profile or use it with a block
   # of code:
-  # 
+  #
   #   MemoryProfiler.profile do
   #     # ...
   #   end
@@ -58,7 +60,7 @@ class MemoryProfiler
   @@locations = {}
   @@allocations = Hash.new { |h,k| h[k] = Hash.new(0) }
 
-  def self.log(o)
+  def self.log(o) # :nodoc:
     loc = caller[1]
     unless @@locations.has_key? loc then
       @@locations[loc] = @@locations.size
@@ -66,6 +68,9 @@ class MemoryProfiler
     loc = @@locations[loc]
     @@allocations[o.class][loc] += 1
   end
+
+  ##
+  # Spy on the memory usage of certain classes.
 
   def self.spy_on *klasses
     klasses.each do |klass|
@@ -77,6 +82,9 @@ class MemoryProfiler
     end
   end
 
+  ##
+  # Wrap +meth+ on +klass+ with a memory profiler.
+
   def self.hook klass, meth
     klass.module_eval do
       old = meth.to_s.sub(/%/, 'pct').sub(/^/, 'old_')
@@ -87,6 +95,9 @@ class MemoryProfiler
       end"
     end
   end
+
+  ##
+  # Report memory usage.
 
   def self.report
     keys = @@locations.invert

@@ -28,5 +28,5 @@ if $0 == __FILE__ then
 
   total = tend - tstart
   avg = total / max
-#  printf "Iter = #{max}, T = %.8f sec, %.8f sec / iter\n", total, avg
+  printf "Iter = #{max}, T = %.8f sec, %.8f sec / iter\n", total, avg
 end
