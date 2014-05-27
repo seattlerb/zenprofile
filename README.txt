@@ -4,6 +4,8 @@
 
 == DESCRIPTION:
 
+NOTE: This project is EOL'd since it relies on event_hook (which is EOL'd)
+
 zenprofiler helps answer WHAT is being called the most. spy_on helps
 answer WHERE those calls are being made. ZenProfiler provides a faster
 version of the standard library ruby profiler. It is otherwise pretty
