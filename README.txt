@@ -57,6 +57,7 @@ run your code, then you'll see where the calls to Array#select and
 
 * event_hook
 * RubyInline
+* Ruby 1.8
 
 == INSTALL:
 
